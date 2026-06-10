@@ -13111,79 +13111,65 @@ async def check_user_blocked(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return True
     return False
 
-# ГЛАВНАЯ ФУНКЦИЯ
+# ГЛАВНАЯ ФУНКЦИЯ (для старой версии python-telegram-bot)
 def main() -> None:
-    # Создаем приложение
-    application = ApplicationBuilder().token(TOKEN).build()
-
     # Инициализация базы данных
     init_db()
-
-    # 🔴 ДОБАВЛЕНО: Инициализация таблицы checks
-    print("🔧 Инициализация таблицы checks...")
     init_checks_db()
-
-    # 🔴 ДОБАВЛЕНО: Инициализация таблицы blocked_users
-    print("🔧 Инициализация таблицы blocked_users...")
     create_blocked_users_table()
-
-    # 🔴 ДОБАВЛЕНО: Проверка структуры таблицы (для отладки)
+    
+    # Проверка структуры таблицы
     def check_table_structure():
-        """Проверяет структуру таблицы checks"""
         conn = sqlite3.connect('bot.db')
         cursor = conn.cursor()
-
         cursor.execute("PRAGMA table_info(checks)")
         columns = cursor.fetchall()
-
         print("📊 Структура таблицы checks:")
         for column in columns:
             print(f"  {column[1]} ({column[2]})")
-
         conn.close()
-
+    
     check_table_structure()
-
-    # 🔴🔴🔴 ВАЖНО: ПРАВИЛЬНЫЙ ПОРЯДОК ОБРАБОТЧИКОВ 🔴🔴🔴
-
-    # 1. Обработчик кнопок
-    application.add_handler(CallbackQueryHandler(button_click))
-
-    # 2. Команды
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("admin", admin_panel))
-    application.add_handler(CommandHandler("stats", stats_command))
-    application.add_handler(CommandHandler("check", check_bot_command))
-    application.add_handler(CommandHandler("debug_orders", debug_orders_command))
-    application.add_handler(CommandHandler("hide", hide_keyboard_command))
-    application.add_handler(CommandHandler("debug_state", debug_state))
-    application.add_handler(CommandHandler("debug_promo", debug_promo_state))
-    application.add_handler(CommandHandler("reset_promo", force_reset_promo_state))
-    application.add_handler(CommandHandler("check_promo", check_promo))
-    application.add_handler(CommandHandler("debug_state", debug_current_state))
-    application.add_handler(CommandHandler("fix_promo_system", fix_promo_system))
-    application.add_handler(CommandHandler("quick_promo", quick_promo))
-    application.add_handler(CommandHandler("simple_promo", create_simple_promo))
-    application.add_handler(CommandHandler("checks", show_all_checks))
-    application.add_handler(CommandHandler("block", block_user_command))
-    application.add_handler(CommandHandler("unblock", unblock_user_command))
-    application.add_handler(CommandHandler("blocked_list", show_blocked_users))
-
-    # 3. Основной обработчик текстовых сообщений
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
-    # 4. Обработчики медиа-сообщений (чеки)
-    application.add_handler(MessageHandler(filters.PHOTO | filters.Document.ALL, handle_message))
-
-    # 5. Обработчик для скрытия клавиатуры
-    application.add_handler(MessageHandler(
+    
+    # Создаем updater (старый стиль для версии 13.x)
+    from telegram.ext import Updater
+    
+    updater = Updater(TOKEN, use_context=True)
+    dp = updater.dispatcher
+    
+    # Добавляем обработчики
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(CommandHandler("admin", admin_panel))
+    dp.add_handler(CommandHandler("stats", stats_command))
+    dp.add_handler(CommandHandler("check", check_bot_command))
+    dp.add_handler(CommandHandler("debug_orders", debug_orders_command))
+    dp.add_handler(CommandHandler("hide", hide_keyboard_command))
+    dp.add_handler(CommandHandler("debug_state", debug_state))
+    dp.add_handler(CommandHandler("debug_promo", debug_promo_state))
+    dp.add_handler(CommandHandler("reset_promo", force_reset_promo_state))
+    dp.add_handler(CommandHandler("check_promo", check_promo))
+    dp.add_handler(CommandHandler("debug_state", debug_current_state))
+    dp.add_handler(CommandHandler("fix_promo_system", fix_promo_system))
+    dp.add_handler(CommandHandler("quick_promo", quick_promo))
+    dp.add_handler(CommandHandler("simple_promo", create_simple_promo))
+    dp.add_handler(CommandHandler("checks", show_all_checks))
+    dp.add_handler(CommandHandler("block", block_user_command))
+    dp.add_handler(CommandHandler("unblock", unblock_user_command))
+    dp.add_handler(CommandHandler("blocked_list", show_blocked_users))
+    
+    # Обработчики кнопок и сообщений
+    dp.add_handler(CallbackQueryHandler(button_click))
+    dp.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    dp.add_handler(MessageHandler(filters.PHOTO | filters.Document.ALL, handle_message))
+    dp.add_handler(MessageHandler(
         filters.ALL & ~filters.TEXT & ~filters.PHOTO & ~filters.Document.ALL & ~filters.COMMAND,
         hide_keyboard
     ))
-
+    
     # Запускаем бота
     logger.info("🤖 Бот запущен и готов к работе!")
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
+    updater.start_polling()
+    updater.idle()
 
 if __name__ == '__main__':
     main()
